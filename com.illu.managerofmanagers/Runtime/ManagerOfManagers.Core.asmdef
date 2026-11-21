@@ -1,0 +1,14 @@
+{
+    "name": "ManagerOfManagers.Core",
+    "rootNamespace": "ManagerOfManagers.Core",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
