@@ -7,6 +7,7 @@
 | [`com.illu.managerofmanagers`](./com.illu.managerofmanagers) | 基础设施：统一纯 C# 与 MonoBehaviour 单例的获取方式与生命周期驱动 | 无 |
 | [`com.illu.json`](./com.illu.json) | `JsonManager`：存档序列化/反序列化（内置 LitJson） | `com.illu.managerofmanagers` |
 | [`com.illu.ui`](./com.illu.ui) | `UIManager + BasePanel`：Canvas 常驻、面板字典、淡入淡出 | `com.illu.managerofmanagers` |
+| [`com.illu.audio`](./com.illu.audio) | `AudioManager`：BGM 淡入淡出、Sfx 声部池（并发 12）、UI 音效、3D 音效 | `com.illu.managerofmanagers` |
 
 ## 安装（任意 Unity 项目）
 
@@ -19,6 +20,7 @@ https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers
 # 功能包（用到哪个装哪个）
 https://github.com/illusogl/illuFramework.git?path=/com.illu.json
 https://github.com/illusogl/illuFramework.git?path=/com.illu.ui
+https://github.com/illusogl/illuFramework.git?path=/com.illu.audio
 ```
 
 > 为什么不能只装一条：Unity 的 UPM 里，包的 `dependencies` **只支持 registry 版本号，不支持 git URL**。
@@ -107,6 +109,28 @@ public class KeySettingPanel : BasePanel
     public override void Init() { }
 }
 ```
+
+## com.illu.audio 用法速览
+
+```csharp
+using Illu.Audio;
+
+// 配置：ScriptableObject 放 Resources/AudioLibrary（组 → key → clip）
+// 组：BGM / UI / Player / Enemy / FootStep ...
+// 通道：Bgm / Sfx / Ui（决定用哪个源与通道音量）
+
+AudioManager.Instance.PlayBgm("Forest");                        // 淡入；切歌自动淡出旧曲
+AudioManager.Instance.PlayUi("Click");                          // UI 组 + Ui 通道
+AudioManager.Instance.PlaySfx("Player", "Sword_1");             // 2D，声部池并发
+AudioManager.Instance.PlaySfxAt(pos, "Enemy", "GetHit_1");      // 3D，池内 voice
+AudioManager.Instance.PlaySfxOn(enemySource, "Enemy", "GetHit_1"); // 跟随角色移动的源
+AudioManager.Instance.StopAllSfx();
+```
+
+- Sfx 是 **12 个 voice 的声部池**：空闲优先，全忙抢占最早开始的一条；
+  `ActiveSfxCount` 可查询，**不排队**（排队会让打击音效延迟）。
+- 缺组/缺键：`LogError`，不抛异常、不重播旧曲。
+- `AudioManager` 为纯 C# Manager（Order 18），自建隐藏的 `[Audio]` 对象，零场景配置。
 
 存档结构（`GameData` 之类）属于**游戏业务**，请写在项目里，
 参考样板：业务 Manager 继承 `Singleton<T>`、读档放在 `OnInit()`、

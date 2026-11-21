@@ -1,0 +1,16 @@
+{
+    "name": "Illu.Audio",
+    "rootNamespace": "Illu.Audio",
+    "references": [
+        "ManagerOfManagers.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
