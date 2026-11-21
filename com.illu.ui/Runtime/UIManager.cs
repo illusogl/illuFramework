@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using ManagerOfManagers.Core;
 using UnityEngine;
 
-namespace Illu.Managers.UI
+namespace Illu.UI
 {
     /// <summary>
     /// UI面板管理器。

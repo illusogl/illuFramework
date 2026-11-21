@@ -5,26 +5,32 @@
 | 包 | 说明 | 依赖 |
 | --- | --- | --- |
 | [`com.illu.managerofmanagers`](./com.illu.managerofmanagers) | 基础设施：统一纯 C# 与 MonoBehaviour 单例的获取方式与生命周期驱动 | 无 |
-| [`com.illu.managers`](./com.illu.managers) | 通用功能 Manager：`JsonManager`（存档序列化，内置 LitJson）、`UIManager + BasePanel`（面板管理） | 需要先装 `com.illu.managerofmanagers` |
+| [`com.illu.json`](./com.illu.json) | `JsonManager`：存档序列化/反序列化（内置 LitJson） | `com.illu.managerofmanagers` |
+| [`com.illu.ui`](./com.illu.ui) | `UIManager + BasePanel`：Canvas 常驻、面板字典、淡入淡出 | `com.illu.managerofmanagers` |
 
 ## 安装（任意 Unity 项目）
 
-`Window → Package Manager → + → Add package from git URL`，**两条都加**（顺序不限）：
+`Window → Package Manager → + → Add package from git URL`，**按需登记**（顺序不限）：
 
 ```
+# 基础包（必装）
 https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers
-https://github.com/illusogl/illuFramework.git?path=/com.illu.managers
+
+# 功能包（用到哪个装哪个）
+https://github.com/illusogl/illuFramework.git?path=/com.illu.json
+https://github.com/illusogl/illuFramework.git?path=/com.illu.ui
 ```
 
 > 为什么不能只装一条：Unity 的 UPM 里，包的 `dependencies` **只支持 registry 版本号，不支持 git URL**。
-> 两个包走 git 安装时必须各自登记（实测过：只装 managers 会缺基础包，编译报 CS0246）。
+> 走 git 安装时每个包必须各自登记（实测过：只装功能包会缺基础包，编译报 CS0246）。
 > 以后若上架 registry / OpenUPM，就可以只留一条。
 
 或者直接写进 `Packages/manifest.json` 的 `dependencies`：
 
 ```json
 "com.illu.managerofmanagers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers",
-"com.illu.managers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managers"
+"com.illu.json": "https://github.com/illusogl/illuFramework.git?path=/com.illu.json",
+"com.illu.ui": "https://github.com/illusogl/illuFramework.git?path=/com.illu.ui"
 ```
 
 要求：机器装有 git；仓库公开，无需凭证。
@@ -80,11 +86,11 @@ CombatManager.Instance.SetActive(true);    // OnActivate；不会重新 OnInit
 - `SetActive` 幂等，可来回多次；
 - **只影响自己**，不传播给其它 Manager（需要"一关一片"时用分组，不动这里）。
 
-## com.illu.managers 用法速览
+## com.illu.json / com.illu.ui 用法速览
 
 ```csharp
-using Illu.Managers;
-using Illu.Managers.UI;
+using Illu.Json;
+using Illu.UI;
 
 // 存档：JsonManager（Order 10，数据层最先就绪）
 JsonManager.Instance.SaveData(myData, "SaveFile");

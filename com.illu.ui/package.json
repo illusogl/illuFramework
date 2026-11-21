@@ -1,0 +1,10 @@
+{
+    "name": "com.illu.ui",
+    "version": "0.1.0",
+    "displayName": "Illu UI",
+    "description": "UIManager + BasePanel：Canvas 常驻、面板字典、CanvasGroup 淡入淡出。基于 com.illu.managerofmanagers。",
+    "unity": "6000.0",
+    "author": {
+        "name": "illu"
+    }
+}

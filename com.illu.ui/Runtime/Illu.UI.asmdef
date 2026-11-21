@@ -1,6 +1,6 @@
 {
-    "name": "Illu.Managers",
-    "rootNamespace": "Illu.Managers",
+    "name": "Illu.UI",
+    "rootNamespace": "Illu.UI",
     "references": [
         "ManagerOfManagers.Core"
     ],

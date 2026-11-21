@@ -3,7 +3,7 @@ using LitJson;
 using ManagerOfManagers.Core;
 using UnityEngine;
 
-namespace Illu.Managers
+namespace Illu.Json
 {
     /// <summary>
     /// 序列化和反序列化Json时  使用的是哪种方案

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Illu.Managers.UI
+namespace Illu.UI
 {
     /// <summary>
     /// 面板基类：CanvasGroup 淡入淡出。面板预制体约定放在 Resources/UI/面板类名。
