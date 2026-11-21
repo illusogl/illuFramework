@@ -5,18 +5,26 @@
 | 包 | 说明 | 依赖 |
 | --- | --- | --- |
 | [`com.illu.managerofmanagers`](./com.illu.managerofmanagers) | 基础设施：统一纯 C# 与 MonoBehaviour 单例的获取方式与生命周期驱动 | 无 |
-| [`com.illu.managers`](./com.illu.managers) | 通用功能 Manager：`JsonManager`（存档序列化，内置 LitJson）、`UIManager + BasePanel`（面板管理） | `com.illu.managerofmanagers`（自动安装） |
+| [`com.illu.managers`](./com.illu.managers) | 通用功能 Manager：`JsonManager`（存档序列化，内置 LitJson）、`UIManager + BasePanel`（面板管理） | 需要先装 `com.illu.managerofmanagers` |
 
 ## 安装（任意 Unity 项目）
 
-`Window → Package Manager → + → Add package from git URL`：
+`Window → Package Manager → + → Add package from git URL`，**两条都加**（顺序不限）：
 
 ```
-# 只要基础设施
 https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers
-
-# 或者一步到位（基础包会作为依赖自动装上）
 https://github.com/illusogl/illuFramework.git?path=/com.illu.managers
+```
+
+> 为什么不能只装一条：Unity 的 UPM 里，包的 `dependencies` **只支持 registry 版本号，不支持 git URL**。
+> 两个包走 git 安装时必须各自登记（实测过：只装 managers 会缺基础包，编译报 CS0246）。
+> 以后若上架 registry / OpenUPM，就可以只留一条。
+
+或者直接写进 `Packages/manifest.json` 的 `dependencies`：
+
+```json
+"com.illu.managerofmanagers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers",
+"com.illu.managers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managers"
 ```
 
 要求：机器装有 git；仓库公开，无需凭证。

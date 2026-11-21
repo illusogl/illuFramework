@@ -2,12 +2,9 @@
     "name": "com.illu.managers",
     "version": "0.1.0",
     "displayName": "Illu Managers",
-    "description": "建立在 com.illu.managerofmanagers 之上的通用功能 Manager：JsonManager（存档序列化）、UIManager + BasePanel（面板管理）。安装本包会自动安装基础包。",
+    "description": "建立在 com.illu.managerofmanagers 之上的通用功能 Manager：JsonManager（存档序列化）、UIManager + BasePanel（面板管理）。",
     "unity": "6000.0",
     "author": {
         "name": "illu"
-    },
-    "dependencies": {
-        "com.illu.managerofmanagers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers"
     }
 }
