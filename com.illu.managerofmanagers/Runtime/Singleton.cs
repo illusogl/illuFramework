@@ -46,6 +46,29 @@ namespace ManagerOfManagers.Core
         protected Singleton() {}
 
         /// <summary>
+        /// 是否处于激活状态。失活只改变这个标志，不会销毁实例、也不会从注册表移除。
+        /// </summary>
+        public bool IsActive { get; private set; } = true;
+
+        /// <summary>
+        /// 激活 / 失活（幂等）。只影响自己，不传播给其它 Manager。
+        /// 子类在 OnTick 首行检查 IsActive，失活期间就不会执行逻辑。
+        /// </summary>
+        public void SetActive(bool active)
+        {
+            if (IsActive == active) return;
+            IsActive = active;
+            if (active) OnActivate();
+            else OnDeactivate();
+        }
+
+        /// <summary>由失活切换为激活时调用一次。</summary>
+        protected virtual void OnActivate() { }
+
+        /// <summary>由激活切换为失活时调用一次（可来回多次，不会重新 OnInit）。</summary>
+        protected virtual void OnDeactivate() { }
+
+        /// <summary>
         /// 驱动顺序 用于给ManagerHub管理调用顺序 升序调用Oninit 降序调用OnDispose
         /// </summary>
         public abstract int Order { get; }

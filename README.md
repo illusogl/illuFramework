@@ -65,6 +65,21 @@ public sealed class GameHub : ManagerHub
 - 全项目只有 Hub 一个 `Update` / `LateUpdate`；
 - Editor 工具在独立程序集（`includePlatforms: ["Editor"]`），不进打包清单。
 
+### 激活 / 失活（方案 A：自门控）
+
+Manager 常驻注册，但可以暂时不参与逻辑：
+
+```csharp
+CombatManager.Instance.SetActive(false);   // 只改标志 + 调 OnDeactivate
+CombatManager.Instance.SetActive(true);    // OnActivate；不会重新 OnInit
+```
+
+约定：在 `OnTick` 首行检查 `IsActive`，失活期间直接 `return`。
+
+- 不销毁实例、不摘注册表、不重新 `OnInit`；
+- `SetActive` 幂等，可来回多次；
+- **只影响自己**，不传播给其它 Manager（需要"一关一片"时用分组，不动这里）。
+
 ## com.illu.managers 用法速览
 
 ```csharp

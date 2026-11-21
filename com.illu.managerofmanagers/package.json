@@ -1,6 +1,6 @@
 {
     "name": "com.illu.managerofmanagers",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "displayName": "Illu Manager of Managers",
     "description": "统一纯 C# 与 MonoBehaviour 单例的获取方式与生命周期驱动。唯一的 Update 循环、按 Order 升序初始化/降序销毁、注册表拓扑固定。",
     "unity": "6000.0",
