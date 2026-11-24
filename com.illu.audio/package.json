@@ -1,8 +1,8 @@
 {
     "name": "com.illu.audio",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "displayName": "Illu Audio",
-    "description": "AudioManager：BGM 淡入淡出、Sfx 声部池、UI 音效、3D 音效。配置于 AudioLibrary（ScriptableObject）。依赖 com.illu.managerofmanagers。",
+    "description": "AudioManager：BGM 淡入淡出、Sfx 声部池、UI 音效、3D 音效。配置于 AudioLibrary（ScriptableObject）。依赖 com.illu.managerofmanagers 和 com.illu.assetload。",
     "unity": "6000.0",
     "author": {
         "name": "illu"

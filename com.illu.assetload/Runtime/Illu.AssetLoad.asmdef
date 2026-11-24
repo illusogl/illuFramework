@@ -1,0 +1,7 @@
+{
+    "name": "Illu.AssetLoad",
+    "rootNamespace": "Illu.AssetLoad",
+    "references": [
+        "ManagerOfManagers.Core"
+    ]
+}

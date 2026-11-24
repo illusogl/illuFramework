@@ -2,7 +2,8 @@
     "name": "Illu.Audio",
     "rootNamespace": "Illu.Audio",
     "references": [
-        "ManagerOfManagers.Core"
+        "ManagerOfManagers.Core",
+        "Illu.AssetLoad"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

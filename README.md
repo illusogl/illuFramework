@@ -5,17 +5,21 @@
 | 包 | 说明 | 依赖 |
 | --- | --- | --- |
 | [`com.illu.managerofmanagers`](./com.illu.managerofmanagers) | 基础设施：统一纯 C# 与 MonoBehaviour 单例的获取方式与生命周期驱动 | 无 |
+| [`com.illu.assetload`](./com.illu.assetload) | `AssetLoadManager`：Resources 单项与批量加载，场景同步和异步加载 | `com.illu.managerofmanagers` |
 | [`com.illu.json`](./com.illu.json) | `JsonManager`：存档序列化/反序列化（内置 LitJson） | `com.illu.managerofmanagers` |
 | [`com.illu.ui`](./com.illu.ui) | `UIManager + BasePanel`：Canvas 常驻、面板字典、淡入淡出 | `com.illu.managerofmanagers` |
-| [`com.illu.audio`](./com.illu.audio) | `AudioManager`：BGM 淡入淡出、Sfx 声部池（并发 12）、UI 音效、3D 音效 | `com.illu.managerofmanagers` |
+| [`com.illu.audio`](./com.illu.audio) | `AudioManager`：音频库异步预加载、BGM 淡入淡出、12 路 SFX、UI 和 3D 音效 | `com.illu.managerofmanagers`、`com.illu.assetload` |
 
-## 安装（任意 Unity 项目）
+## 安装（Unity 6）
 
-`Window → Package Manager → + → Add package from git URL`，**按需登记**（顺序不限）：
+`Window → Package Manager → + → Add package from git URL`，按依赖顺序添加。使用音频包时，先添加 Core，再添加资源加载包，最后添加音频包。
 
 ```
 # 基础包（必装）
 https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers
+
+# 资源加载包（音频包依赖）
+https://github.com/illusogl/illuFramework.git?path=/com.illu.assetload
 
 # 功能包（用到哪个装哪个）
 https://github.com/illusogl/illuFramework.git?path=/com.illu.json
@@ -23,19 +27,23 @@ https://github.com/illusogl/illuFramework.git?path=/com.illu.ui
 https://github.com/illusogl/illuFramework.git?path=/com.illu.audio
 ```
 
-> 为什么不能只装一条：Unity 的 UPM 里，包的 `dependencies` **只支持 registry 版本号，不支持 git URL**。
-> 走 git 安装时每个包必须各自登记（实测过：只装功能包会缺基础包，编译报 CS0246）。
-> 以后若上架 registry / OpenUPM，就可以只留一条。
+通过 Git 安装时，在项目的 `manifest.json` 中为每个依赖包单独登记地址。 [Unity Git 依赖说明](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/upm-git)
 
-或者直接写进 `Packages/manifest.json` 的 `dependencies`：
+也可以一次写入 `Packages/manifest.json` 的 `dependencies`。下例安装音频和它的两个依赖包。
 
 ```json
 "com.illu.managerofmanagers": "https://github.com/illusogl/illuFramework.git?path=/com.illu.managerofmanagers",
-"com.illu.json": "https://github.com/illusogl/illuFramework.git?path=/com.illu.json",
-"com.illu.ui": "https://github.com/illusogl/illuFramework.git?path=/com.illu.ui"
+"com.illu.assetload": "https://github.com/illusogl/illuFramework.git?path=/com.illu.assetload",
+"com.illu.audio": "https://github.com/illusogl/illuFramework.git?path=/com.illu.audio"
 ```
 
 要求：机器装有 git；仓库公开，无需凭证。
+
+## 开发顺序
+
+动手前按 asmdef 梳理引用，先实现并验证底层依赖，再接入上层 Manager，最后接入游戏层。当前音频链按 Core、AssetLoad、Audio、游戏启动流程的顺序开发。
+
+如果某个 Manager 缺少可复用的底层能力，先指出具体缺口和调用场景，再确定是否独立成组件。
 
 ## com.illu.managerofmanagers 用法速览
 
@@ -110,7 +118,19 @@ public class KeySettingPanel : BasePanel
 }
 ```
 
+## com.illu.assetload 用法速览
+
+把 `AssetLoadManager.Instance` 注册到游戏的 Hub。它的 Order 为 5。Hub 初始化完成后，可以从游戏启动流程或加载面板提交请求。
+
+- 单项资源用 `LoadResource<T>()` 或 `LoadResourceAsync<T>()`。
+- 批次用 `LoadResourceBatchAsync<T>()`。等待结算后用 `Assets` 按输入索引取结果，用 `FailureCount` 和 `IsCanceled` 判断批次结果。
+- 场景用 `LoadScene()` 或 `LoadSceneAsync()`。同步入口返回 `true` 表示已提交，场景就绪以 `sceneLoaded` 为准。
+
+[资源加载接口、类图与时序图](docs/assetloadmanager/AssetLoadManager.md)
+
 ## com.illu.audio 用法速览
+
+注册 `AssetLoadManager.Instance`（Order 5）和 `AudioManager.Instance`（Order 18）。从 `0.2.0` 开始，启动流程要在 Hub 完成初始化后显式预加载默认音频库，例如在 `GameHub.Start()` 调完 `base.Start()` 之后。
 
 ```csharp
 using Illu.Audio;
@@ -119,6 +139,7 @@ using Illu.Audio;
 // 组：BGM / UI / Player / Enemy / FootStep ...
 // 通道：Bgm / Sfx / Ui（决定用哪个源与通道音量）
 
+AudioManager.Instance.LoadDefaultLibraryAsync();                // 由启动流程调用一次
 AudioManager.Instance.PlayBgm("Forest");                        // 淡入；切歌自动淡出旧曲
 AudioManager.Instance.PlayUi("Click");                          // UI 组 + Ui 通道
 AudioManager.Instance.PlaySfx("Player", "Sword_1");             // 2D，声部池并发
@@ -129,8 +150,11 @@ AudioManager.Instance.StopAllSfx();
 
 - Sfx 是 **12 个 voice 的声部池**：空闲优先，全忙抢占最早开始的一条；
   `ActiveSfxCount` 可查询，**不排队**（排队会让打击音效延迟）。
-- 缺组/缺键：`LogError`，不抛异常、不重播旧曲。
-- `AudioManager` 为纯 C# Manager（Order 18），自建隐藏的 `[Audio]` 对象，零场景配置。
+- 播放入口自行处理库状态。库加载中会暂存最新的 BGM 请求，空库时跳过音效；默认库加载失败时记录一次警告。
+- 已有库但缺组或缺键时记录配置错误，保留当前 BGM。
+- `AudioManager` 自建 `[Audio]` 对象和播放器。也可以调用 `SetLibrary()` 装入调用方准备好的库。
+
+[音频类图与播放时序图](docs/audiomanager/AudioManager.md)
 
 存档结构（`GameData` 之类）属于**游戏业务**，请写在项目里，
 参考样板：业务 Manager 继承 `Singleton<T>`、读档放在 `OnInit()`、

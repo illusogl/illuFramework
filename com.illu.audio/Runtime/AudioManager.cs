@@ -1,3 +1,4 @@
+using Illu.AssetLoad;
 using ManagerOfManagers.Core;
 using UnityEngine;
 
@@ -20,6 +21,11 @@ namespace Illu.Audio
         const string LibraryResourcePath = "AudioLibrary";
 
         AudioLibrary _library;
+        // 默认库的原生请求也作为当前加载任务的标记，手动换库或释放时解除订阅。
+        ResourceRequest _libraryRequest;
+        // 默认库加载期间只保留最近一次播放请求。等拿到库后才按曲名查找素材。
+        string _startupBgm;
+        float _startupBgmFade;
         GameObject _root;
         AudioSource _bgm;
         AudioSource _ui;
@@ -67,7 +73,8 @@ namespace Illu.Audio
             }
         }
 
-        /// <summary>由 Hub 启动音频模块。创建跨场景的 [Audio] 和播放器，再加载并校验默认音频库。</summary>
+        /// <summary>由 Hub 创建跨场景的 BGM、UI 和 SFX 播放器，准备接收播放请求。</summary>
+        /// <remarks>启动流程按需要调用 LoadDefaultLibraryAsync，播放器在库就绪后即可使用。</remarks>
         public override void OnInit()
         {
             _root = new GameObject("[Audio]");
@@ -80,34 +87,85 @@ namespace Illu.Audio
             _voiceStartTime = new float[SfxVoiceCount];
             for (int i = 0; i < SfxVoiceCount; i++)
                 _sfxVoices[i] = CreateSource("SFX_" + i);
-
-            _library = Resources.Load<AudioLibrary>(LibraryResourcePath);
-            if (_library == null)
-            {
-                Debug.LogWarning($"[Audio] Resources/{LibraryResourcePath} 不存在：调用 Play* 会报错，可先用 SetLibrary 注入。");
-            }
-            else
-            {
-                _library.Validate();
-            }
         }
 
-        /// <summary>替换后续播放请求所用的音频库，并校验新的配置。</summary>
-        /// <param name="library">可以传入预先加载的资源或测试用库，传 null 表示清空。</param>
+        /// <summary>由启动流程或加载面板显式发起默认音频库加载。资源就绪后向 AudioManager 安装音频库。</summary>
+        /// <returns>新请求或仍在进行的原生请求。已有音频库或加载未被接受时返回 null。</returns>
+        /// <remarks>返回的句柄可用于显示加载进度。安装音频库和处理播放请求由 AudioManager 负责。</remarks>
+        public ResourceRequest LoadDefaultLibraryAsync()
+        {
+            if (_library != null || _libraryRequest != null)
+                return _libraryRequest;
+
+            if (_root == null)
+            {
+                Debug.LogError("[Audio] 请在 Hub 初始化播放器后加载音频库。");
+                return null;
+            }
+
+            var request = AssetLoadManager.Instance.LoadResourceAsync<AudioLibrary>(LibraryResourcePath);
+            if (request == null) return null;
+
+            // 先记住这次请求，再订阅 Unity 的完成事件，回调才能对应到正确的任务。
+            _libraryRequest = request;
+            request.completed += OnDefaultLibraryLoaded;
+            return request;
+        }
+
+        /// <summary>接收 Unity 的加载完成通知，核对请求后校验并安装它的资源结果。</summary>
+        /// <param name="operation">触发完成事件的 Unity 操作。</param>
+        void OnDefaultLibraryLoaded(AsyncOperation operation)
+        {
+            if (!ReferenceEquals(operation, _libraryRequest)) return;
+
+            var library = _libraryRequest.asset as AudioLibrary;
+            if (library == null)
+                Debug.LogWarning($"[Audio] 未能加载 Resources/{LibraryResourcePath}。");
+
+            SetLibrary(library);
+        }
+
+        /// <summary>替换后续请求使用的音频库。校验配置后，有可用音频库时继续处理之前暂存的启动 BGM。</summary>
+        /// <param name="library">已加载的资源或测试库。传 null 会清空当前库。</param>
+        /// <remarks>手动注入时解除正在等待的默认库回调，后续播放采用本次提供的库。</remarks>
         public void SetLibrary(AudioLibrary library)
         {
+            StopTrackingLibraryRequest();
             _library = library;
-            _library?.Validate();
+            if (_library != null)
+                _library.Validate();
+
+            // 先取出并清掉暂存项，再进入正常的播放路径，确保启动请求最多消费一次。
+            var startupBgm = _startupBgm;
+            _startupBgm = null;
+            if (startupBgm != null && _library != null)
+                PlayBgm(startupBgm, _startupBgmFade);
+        }
+
+        /// <summary>解除当前默认库的完成回调，并释放该请求的引用。Unity 继续处理已提交的底层操作。</summary>
+        void StopTrackingLibraryRequest()
+        {
+            if (_libraryRequest == null) return;
+
+            _libraryRequest.completed -= OnDefaultLibraryLoaded;
+            _libraryRequest = null;
         }
 
         // ---------------------------------------------------------------- BGM
 
-        /// <summary>请求播放背景音乐。空闲时直接淡入，已有曲目时先淡出旧曲，再换素材并淡入。</summary>
+        /// <summary>在音频库加载期间先记住最近一次 BGM 请求。库就绪后，空闲时直接淡入，有正在播放的曲目时先淡出再换曲。</summary>
         /// <param name="name">音频库 BGM 组中的曲目键。</param>
         /// <param name="fade">单段淡变的时长，单位为秒，最小为 0.01 秒。</param>
         public void PlayBgm(string name, float fade = 0.6f)
         {
             if (_bgm == null) return;
+            if (_libraryRequest != null)
+            {
+                _startupBgm = name;
+                _startupBgmFade = fade;
+                return;
+            }
+
             // 先查素材。曲名无效时，保留当前的播放和渐变状态。
             if (!TryGetClip(BgmGroup, name, out var clip)) return;
             if (_bgm.isPlaying && _currentBgm == name && !_fadingOut) return;
@@ -126,10 +184,11 @@ namespace Illu.Audio
             }
         }
 
-        /// <summary>取消待播曲目，把正在播放的背景音乐淡出到零后停止。</summary>
+        /// <summary>取消还在等音频库的启动请求和等待切入的曲目。已经播放的 BGM 会淡出后停止。</summary>
         /// <param name="fade">淡出时长，单位为秒，最小为 0.01 秒。</param>
         public void StopBgm(float fade = 0.6f)
         {
+            _startupBgm = null;
             if (_bgm == null) return;
 
             _pendingBgm = null;
@@ -363,6 +422,9 @@ namespace Illu.Audio
             if (_root != null)
                 GameObject.Destroy(_root);
 
+            StopTrackingLibraryRequest();
+            _startupBgm = null;
+            _library = null;
             _root = null;
             _bgm = null;
             _ui = null;
@@ -393,7 +455,7 @@ namespace Illu.Audio
             return source;
         }
 
-        /// <summary>统一处理播放前的素材查找，在音频库未加载或找不到可用素材时记录错误。</summary>
+        /// <summary>统一查找播放素材。空库时跳过本次查找，已有库但找不到素材时记录配置错误。</summary>
         /// <param name="group">素材所在的分组。</param>
         /// <param name="name">分组内的音效或曲目键。</param>
         /// <param name="clip">查找到的音频素材。</param>
@@ -402,11 +464,7 @@ namespace Illu.Audio
         {
             clip = null;
 
-            if (_library == null)
-            {
-                Debug.LogError("[Audio] AudioLibrary 未加载，无法播放音效");
-                return false;
-            }
+            if (_library == null) return false;
 
             if (_library.TryGet(group, name, out clip))
                 return true;
