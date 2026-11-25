@@ -160,9 +160,47 @@ AudioManager.Instance.StopAllSfx();
 
 ## com.illu.input 用法速览
 
-1. 在项目中启用 Unity Input System，建立独立的 `Gameplay.inputactions`，添加玩法动作和控制方案。全项目输入资产可继续承载 UI 动作。
-2. 在 `GameHub.RegisterManagers()` 中用 `new InputManager(gameplayActions)` 创建实例并注册。等 `base.Start()` 完成后，恢复玩家绑定、选择控制方案，再调用 `SetGameplayEnabled(true)`。
-3. 业务用 `SubscribeButton()` 或 `SubscribeValue<Vector2>()` 接入动作。界面用 `GetBindings()` 取得当前方案的按键名称。改键前由游戏流程暂停玩法，完成或取消后由游戏显式恢复。
+在项目中启用 Unity Input System，建立独立的 `Gameplay.inputactions`。在 `GameHub.RegisterManagers()` 中创建并注册 `new InputManager(gameplayActions)`。下面各段在各自对应的游戏流程或界面回调中调用。
+
+```csharp
+using Illu.Input;
+using UnityEngine;
+
+// Hub 初始化完成后，从玩家存档恢复键位和控制方案。
+// 本例的动作资产定义了 Keyboard&Mouse 和 Gamepad 两个方案。
+InputManager input = gameHub.Input;
+input.LoadBindingOverrides(savedBindingsJson);
+if (!input.SetControlScheme(savedScheme))
+    input.SetControlScheme("Keyboard&Mouse");
+input.SetGameplayEnabled(true);
+
+// 角色就绪时订阅。动作引用由 Inspector 配置。
+var moveSubscription = input.SubscribeValue<Vector2>(moveAction, value => moveDirection = value);
+var attackSubscription = input.SubscribeButton(attackAction, Attack);
+
+// 打开引导 UI 时查询键名，此处取当前方案的第一条绑定。
+var bindings = input.GetBindings(interactAction, input.CurrentControlScheme);
+if (bindings.Count > 0)
+    hintLabel.text = $"按 {bindings[0].DisplayName} 交互";
+
+// 玩家选择改键时，玩法已经暂停。selectedBinding 来自同一动作的绑定列表。
+input.BeginRebind(interactAction, selectedBinding.Id, applied =>
+{
+    if (applied)
+        SaveInputSettings(input.SaveBindingOverrides(), input.CurrentControlScheme);
+});
+
+// 下面各行分别在对应的操作发生时执行。
+// input.SetGameplayEnabled(false);                  // 暂停玩法
+// input.SetGameplayEnabled(true);                   // 玩家选择继续游戏
+// input.SetControlScheme("Gamepad");               // 玩家切换到手柄
+// input.CancelRebind();                             // 设置面板取消改键
+// input.ResetBinding(interactAction, selectedBinding.Id); // 恢复该条绑定的默认键
+// moveSubscription.Dispose();                      // 角色退出时解绑
+// attackSubscription.Dispose();
+```
+
+`SaveInputSettings` 由游戏项目实现。玩家改键、还原键位或切换方案后，项目可以保存绑定覆盖 JSON 和方案名，并刷新已有的按键提示。
 
 [输入接口、类图与时序图](docs/inputmanager/InputManager.md)
 
