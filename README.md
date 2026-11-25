@@ -9,10 +9,11 @@
 | [`com.illu.json`](./com.illu.json) | `JsonManager`：存档序列化/反序列化（内置 LitJson） | `com.illu.managerofmanagers` |
 | [`com.illu.ui`](./com.illu.ui) | `UIManager + BasePanel`：Canvas 常驻、面板字典、淡入淡出 | `com.illu.managerofmanagers` |
 | [`com.illu.audio`](./com.illu.audio) | `AudioManager`：音频库异步预加载、BGM 淡入淡出、12 路 SFX、UI 和 3D 音效 | `com.illu.managerofmanagers`、`com.illu.assetload` |
+| [`com.illu.input`](./com.illu.input) | `InputManager` 管理玩法动作、键鼠与手柄方案、改键和按键提示 | `com.illu.managerofmanagers`、`com.unity.inputsystem` |
 
 ## 安装（Unity 6）
 
-`Window → Package Manager → + → Add package from git URL`，按依赖顺序添加。使用音频包时，先添加 Core，再添加资源加载包，最后添加音频包。
+`Window → Package Manager → + → Add package from git URL`，按依赖顺序添加。使用音频包时，先添加 Core，再添加资源加载包，最后添加音频包。使用输入包时，先添加 Core，再添加输入包。输入包要求 Unity 6000.6，UPM 会解析 Input System 1.20.0 依赖。
 
 ```
 # 基础包（必装）
@@ -25,6 +26,7 @@ https://github.com/illusogl/illuFramework.git?path=/com.illu.assetload
 https://github.com/illusogl/illuFramework.git?path=/com.illu.json
 https://github.com/illusogl/illuFramework.git?path=/com.illu.ui
 https://github.com/illusogl/illuFramework.git?path=/com.illu.audio
+https://github.com/illusogl/illuFramework.git?path=/com.illu.input
 ```
 
 通过 Git 安装时，在项目的 `manifest.json` 中为每个依赖包单独登记地址。 [Unity Git 依赖说明](https://docs.unity.com/en-us/engine/6000.0/manual/packages-list/upm-git)
@@ -56,7 +58,7 @@ public sealed class AudioManager : Singleton<AudioManager>
 }
 
 // 2. MonoBehaviour Manager（场景里手动挂一个）
-public sealed class InputManager : MonoSingleton<InputManager>
+public sealed class SampleSceneManager : MonoSingleton<SampleSceneManager>
 {
     public override int Order => 30;
     protected override void Awake() { base.Awake(); /* 只做身份相关 */ }
@@ -68,7 +70,7 @@ public sealed class GameHub : ManagerHub
     protected override void RegisterManagers()
     {
         Register(AudioManager.Instance);
-        Register(InputManager.Instance);
+        Register(SampleSceneManager.Instance);
     }
 }
 ```
@@ -155,6 +157,14 @@ AudioManager.Instance.StopAllSfx();
 - `AudioManager` 自建 `[Audio]` 对象和播放器。也可以调用 `SetLibrary()` 装入调用方准备好的库。
 
 [音频类图与播放时序图](docs/audiomanager/AudioManager.md)
+
+## com.illu.input 用法速览
+
+1. 在项目中启用 Unity Input System，建立独立的 `Gameplay.inputactions`，添加玩法动作和控制方案。全项目输入资产可继续承载 UI 动作。
+2. 在 `GameHub.RegisterManagers()` 中用 `new InputManager(gameplayActions)` 创建实例并注册。等 `base.Start()` 完成后，恢复玩家绑定、选择控制方案，再调用 `SetGameplayEnabled(true)`。
+3. 业务用 `SubscribeButton()` 或 `SubscribeValue<Vector2>()` 接入动作。界面用 `GetBindings()` 取得当前方案的按键名称。改键前由游戏流程暂停玩法，完成或取消后由游戏显式恢复。
+
+[输入接口、类图与时序图](docs/inputmanager/InputManager.md)
 
 存档结构（`GameData` 之类）属于**游戏业务**，请写在项目里，
 参考样板：业务 Manager 继承 `Singleton<T>`、读档放在 `OnInit()`、

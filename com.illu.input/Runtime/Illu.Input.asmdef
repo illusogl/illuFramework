@@ -1,0 +1,9 @@
+{
+    "name": "Illu.Input",
+    "rootNamespace": "Illu.Input",
+    "references": [
+        "ManagerOfManagers.Core",
+        "Unity.InputSystem"
+    ],
+    "autoReferenced": true
+}

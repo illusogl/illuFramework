@@ -1,0 +1,13 @@
+{
+    "name": "com.illu.input",
+    "version": "0.1.0",
+    "displayName": "Illu Input",
+    "description": "Gameplay actions, control schemes and runtime rebinding backed by Unity Input System.",
+    "unity": "6000.6",
+    "author": {
+        "name": "illu"
+    },
+    "dependencies": {
+        "com.unity.inputsystem": "1.20.0"
+    }
+}
